@@ -1,5 +1,18 @@
 import requests
 from bs4 import BeautifulSoup
+import sqlite3
+
+
+#Connect the database
+conn= sqlite3.connect('ipl_matches.db')
+cursor= conn.cursor()
+
+
+#Creating the table
+cursor.execute('''CREATE TABLE IF NOT EXISTS matches
+               (match VARCHAR, location TEXT, date VARCHAR)''')
+conn.commit()
+
 
 # Getting the HTML
 url = "https://www.cricbuzz.com/cricket-series/7607/indian-premier-league-2024/matches"
@@ -12,8 +25,11 @@ else:
 
 htmlContent = response.text
 
+
 # Parsing the HTML
 soup = BeautifulSoup(htmlContent, 'html.parser')
+
+
 
 # Getting the Header
 h1_tag = soup.find('h1')
@@ -26,6 +42,7 @@ else:
     print()
  
 
+
 # Finding all <a> tags with class 'text-hvr-underline' and print their text content
 anchors = soup.find_all('a', class_='text-hvr-underline')
 if not anchors:
@@ -33,29 +50,34 @@ if not anchors:
 else:
     for a_tag in anchors[:-2]:
         if 'text-hvr-underline' in a_tag.get('class', []):
-            print("Match:", a_tag.text)
-
-
-            # Finding the corresponding <div> tag with class 'text-gray' and print its text content
-            div_sibling = a_tag.find_next_sibling('div', class_='text-gray')
-            if div_sibling:
-                print("Location:", div_sibling.text.strip())
+            match = a_tag.text
+            location_div = a_tag.find_next_sibling('div', class_='text-gray')
+            if location_div:
+                location = location_div.text.strip()
             else:
-                print("Location: Not found")
-
-
-            # Finding the corresponding <div> tag with class 'cb-text-upcoming' and print its text content for date
+                location = "Not found"
             date_div = a_tag.find_next('a', class_='cb-text-upcoming')
             if date_div:
-                print("Date:", date_div.text.strip())
+                date = date_div.text.strip()
+            else:
+                date = "Not found"
 
 
-            # Finding the corresponding <div> tag with class 'schedule-time' and print its text content for time
-            time_div = a_tag.find_next('div', class_='cb-text-upcoming')
-            if time_div:
-                print("Time:", time_div.text.strip())
+
+# Inserting the scraped data
+            cursor.execute("INSERT INTO matches (match, location, date) VALUES (?, ?, ?)",
+                           (match, location, date))
+            print("Inserted:", match, location, date)
+            print()
 
 
-            print()  # Prints an empty line for better readability between matches
+#Commit changes and close
+
+conn.commit()
+conn.close()
+
+
+
+
 
 
